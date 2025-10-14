@@ -1,0 +1,12 @@
+FROM python:3.9-slim
+
+USER root
+
+WORKDIR /
+
+COPY . .
+
+RUN pip install pygame
+RUN pip install pandas
+
+CMD ["python", "life_console.py"]

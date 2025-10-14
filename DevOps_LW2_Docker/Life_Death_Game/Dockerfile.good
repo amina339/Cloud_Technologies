@@ -1,0 +1,15 @@
+FROM python:3.9-slim
+
+RUN useradd -u 2000 -m appuser
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+COPY . . 
+
+USER appuser
+
+CMD ["python", "life_console.py"]
