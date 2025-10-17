@@ -1,0 +1,51 @@
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: newsdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret123
+      PYTHONPATH: /app
+
+    ports:
+      - "5432:5432"
+    volumes:
+      - /postgres_data:/var/lib/postgresql/data 
+
+  database-init:
+    depends_on:
+      - postgres-db
+
+    build: .   
+
+    command: python bd_filling.py
+    working_dir: /app/database
+    environment:
+      DATABASE_URL: postgresql://admin:secret123@postgres-db:5432/newsdb   
+      PYTHONPATH: /app       
+
+    volumes:
+      - ./shared:/app/shared
+      - ./database:/app/database  
+
+  web-app:
+    depends_on:
+      - postgres-db
+      - database-init
+
+    build: .   
+
+    command: python habrnews.py         
+    working_dir: /app/backend 
+    environment:
+      DATABASE_URL: postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH: /app
+
+    ports:
+      - "8000:8080" 
+    volumes:
+      - ./shared:/app/shared  
+      - ./backend:/app/backend  
+
+volumes:
+  postgres_data:
