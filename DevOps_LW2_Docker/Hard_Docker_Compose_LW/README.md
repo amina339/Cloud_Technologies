@@ -126,7 +126,64 @@ the attribute `version` is obsolete, it will be ignored, please remove it to avo
 <img width="1492" height="66" alt="Снимок экрана 2025-10-20 151401" src="https://github.com/user-attachments/assets/64c13850-df53-4e05-b01e-796158acbf00" />
 
 Далее на этой же фотографии видно, что файлы найдены не были, так как мы не прописали рабочие директории, ну и следовательно остальные наши bad practices особо проверить тоже не получится
-Исправим это, чтобы хотя бы минимально посмотреть на работу композа,
+Исправим это, чтобы хотя бы минимально посмотреть на работу композа. Пропишем пути (листинг кода в такие моменты будет в части хорошего композ-файла) и опять все запустим
+
+<img width="1525" height="223" alt="Снимок экрана 2025-10-20 152955" src="https://github.com/user-attachments/assets/defad2fc-11a0-4d72-92c9-1d48ef4887dc" />
+
+Так как мы не указали порядок поднятия сервисов, то вначале запустился сам сайт, а потом заполнение бд, но тут и возникли проблемы, так как мы даже еще не создали бд, а также название было слишком длинным и 'could not translate host name'. В конце концов логи перестали появляться и все застыло, потому что дальнейших инструкций не было прописано
+Исправим и это, пропишем все порядки в виде depends_on, исправим имя, а чтобы избежать проблемы на картинке ниже 
+
+<img width="1529" height="66" alt="Снимок экрана 2025-10-20 160024" src="https://github.com/user-attachments/assets/fd7b0ac7-dd55-4a5d-ab8f-5d0ca3163208" />
+
+Пропишем еще и 
+```
+condition: service_healthy
+```
+то есть, что мы запускаем следующий контейнер, когда подключимся к бд
+и 
+```
+healthcheck: 
+      test: ["CMD-SHELL", "pg_isready -U admin -d newsdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+```
+чтобы все ждали создания бд, а не просто запуска контейнера (примерно похожее написала и в другом сервисе)
+
+также я заодно решила сразу написать и для части сайта такую штуку
+```
+condition: service_completed_successfull
+```
+```
+command: >
+      sh -c "
+          python bd_filling.py
+          
+          if psql -h postgres-db -U admin -d newsdb -c 'SELECT COUNT(*) FROM news' | grep -q '0'; then
+            exit 1
+          else
+            exit 0
+          fi
+        "
+```
+
+И все сработало 
+
+<img width="673" height="120" alt="Снимок экрана 2025-10-20 160847" src="https://github.com/user-attachments/assets/eafe75d8-101e-470c-bfaa-e93bef511159" />
+
+Теперь посмотрим, сможем ли мы как разработчики менять какие-то фичи без новых rebuildов. Например, захотелось поменять главную страницу на страницу рекомендаций 
+```
+@route('/')
+def index():
+    redirect("/news_recommedations")
+```
+```
+docker-compose -f docker-compose-bad.yml restart
+```
+<img width="673" height="120" alt="Снимок экрана 2025-10-20 160847" src="https://github.com/user-attachments/assets/d34bca74-e252-4128-afb4-0a93d5ef344f" />
+
+Главная страница осталась прежней(
 ## Хороший docker-compose.yml
 1. Мы в целом не указываем version, потому что, начиная с какой-то версии, это делать не нужно и все и так работает
 2. Ставим нормальные и понятные названия сервисов, в моем случае
@@ -141,7 +198,7 @@ services:
 ```
 ### Основные изменения части postgres-db
 - Берем образ полегче
-- Встраиваем том, чтобы данные где-то хранились
+- Встраиваем том, чтобы данные где-то хранились (named volume) даже после docker-compose down
 - Важные данные конфингурации БД и пути пишем в переменные окружения и создаем файл .env, в котором они хранятся (удобнее для безопасности (если вдруг пойдет в прод) и для внесения изменений, то есть не надо переписывать docker-compose.yaml)
 ```
 postgres-db:
@@ -151,11 +208,17 @@ postgres-db:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PYTHONPATH: ${PYTHONPATH}
+    healthcheck: 
+        test: ["CMD-SHELL", "pg_isready -U admin -d newsdb"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+        start_period: 10s
 
     ports:
       - "5432:5432"
     volumes:
-      - /postgres_data:/var/lib/postgresql/data 
+      - postgres_data:/var/lib/postgresql/data 
 ```
 ### Основные изменения части database-init
 - Определяю зависимость между серверами, чтобы все запускалось в правильном порядке
@@ -164,11 +227,21 @@ postgres-db:
 ```
 database-init:
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
 
     build: .   
 
-    command: python bd_filling.py
+    command: >
+      sh -c "
+          python bd_filling.py
+          
+          if psql -h postgres-db -U admin -d newsdb -c 'SELECT COUNT(*) FROM news' | grep -q '0'; then
+            exit 1
+          else
+            exit 0
+          fi
+        "
     working_dir: /app/database
     environment:
       DATABASE_URL: ${DATABASE_URL} 
@@ -254,4 +327,5 @@ docker-compose restart web-app
 А тут еще я захотела посмотреть на табличку в БД
 
 <img width="1898" height="497" alt="Снимок экрана 2025-10-17 204152" src="https://github.com/user-attachments/assets/5e25bcc4-1ac4-4163-83e2-64820b46e617" />
+
 
