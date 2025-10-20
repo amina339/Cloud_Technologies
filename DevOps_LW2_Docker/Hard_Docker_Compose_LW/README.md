@@ -12,6 +12,121 @@
 Единственная вещь, которуя я поменяла, была база данных. Изначально использовался SQLite и данные хранились в файле .bd, а я для большей практики и хардкора захотела создавать базу PostgreSQL, поэтому просто пришлось добавить +1 бибилиотеку в requirements.txt и изменить ссылку, по которой создается engine.
 
 #### Здесь также хочу отметить, что я писала композ для dev, а не prod, то есть по-хорошему важно было иметь возможность вносить изменения без ненужных rebuildов 
+
+## Плохой docker-compose.yml
+1. Укажем старую версию docker-compose.yml.
+```
+version: '1'
+```
+Почему это не очень хорошо? Потому что, начиная со 2 версии Docker-compose этот параметр указывать не нужно, то есть это лишняя строка, которая может потом вызвать конфликты, если в файле писать то, чего в данной версии еще не было
+2. Дадим сервисам длинные нечитаемые названия, которые поймём только мы. Опять же другим разработчикам будет трудно понять, за что отвечает этот сервис, а также если еспользовать эти названия в других местах, это будет занимать больше времени и может возникнуть путаница.
+```
+services:
+  a_very_long_and_cool_creation_of_the_best_data_base_in_the_world:
+  this_is_the_part_when_we_are_initializing_and_filling_our_precious_database:
+  this_thing_takes_data_from_habr_ru_and_shows_it_when_you_open_your_local_host:
+```
+### Часть a_very_long_and_cool_creation_of_the_best_data_base_in_the_world
+1. Берем тяжелый и самый последний образ. По аналогии с докерфайлом - такая практика просто занимает лишнюю память и время при сборке
+```
+image: postgres:latest
+```
+2. Все пароли, ключи и т.п. поставим сразу в .yml, что небезопасно и неудобно при использовании их например продакшаном и разработкой (у них могут быть разные данные)
+```
+environment:
+      POSTGRES_DB=newsdb
+      POSTGRES_USER=admin
+      POSTGRES_PASSWORD=secret123
+      PYTHONPATH=/app
+```
+3. Порты напишем нормально 
+```
+ports:
+      - "5432:5432"
+```
+4. Не будем встраивать том, то есть данные базы данных не будут храниться, что по очевидным причинам не есть хорошо
+Для эксперимента я решила добавить искуственную задержку в инициализацию базы данных, чтобы потом показать пример еще одного bad practice (отсутствие depends_on)
+### Часть this_is_the_part_when_we_are_initializing_and_filling_our_precious_database:
+1. Из хорошего - инициализируем сборку образа из докерфайла и ставим команду запуска нужного файла (заполнение бд данными)
+```
+this_is_the_part_when_we_are_initializing_and_filling_our_precious_database:
+
+    build: .   
+
+    command: python bd_filling.py
+```
+2. Точно так же раскрываем все секреты
+```
+environment:
+      DATABASE_URL=postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH=/app
+```
+3. Не прописываем working_dir, несмотря на то, что по докерфайлу все файлы скопировались в /app
+4. Не прописываем порядок запуска контейнеров (нет depends_on), надеемся на удачу
+5. Не встраиваем тома, которые будут содержать программный код. Для разработки это плохо тем, что при изменении кода каждый раз надо делать связку down + build + up
+### Часть this_thing_takes_data_from_habr_ru_and_shows_it_when_you_open_your_local_host
+Все так же как и в предыдущей части, но с другой командой и прописыванием портов
+```
+this_thing_takes_data_from_habr_ru_and_shows_it_when_you_open_your_local_host:
+
+  build: .   
+
+  command: python habrnews.py   
+  environment:
+    DATABASE_URL=postgresql://admin:secret123@postgres-db:5432/newsdb
+    PYTHONPATH=/app
+
+  ports:
+    - "8000:8080"
+```
+В итоге получается такой файл
+```
+version: '1'
+services:
+  a_very_long_and_cool_creation_of_the_best_data_base_in_the_world:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB=newsdb
+      POSTGRES_USER=admin
+      POSTGRES_PASSWORD=secret123
+      PYTHONPATH=/app
+
+    ports:
+      - "5432:5432"
+
+  this_is_the_part_when_we_are_initializing_and_filling_our_precious_database:
+
+    build: .   
+
+    command: python bd_filling.py
+    environment:
+      DATABASE_URL=postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH=/app      
+
+  this_thing_takes_data_from_habr_ru_and_shows_it_when_you_open_your_local_host:
+
+    build: .   
+
+    command: python habrnews.py   
+    environment:
+      DATABASE_URL=postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH=/app
+
+    ports:
+      - "8000:8080" 
+```
+Также в данном случае мы не писали .dockerignore и копируем все возможные файлы в образ
+## Работа плохого композа
+Во-первых вышло предупреждение 
+```
+the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+```
+В глаза сразу бросаются наши длинные названия, которые делают чтение логов почти невозможными. Даже мне нужно несколько раз перечитать только лишь названия, чтобы понять, что происходит, хотя, казалось бы, я сама придумала названия
+
+<img width="1492" height="66" alt="Снимок экрана 2025-10-20 151401" src="https://github.com/user-attachments/assets/64c13850-df53-4e05-b01e-796158acbf00" />
+
+Далее на этой же фотографии видно, что файлы найдены не были, так как мы не прописали рабочие директории, ну и следовательно остальные наши bad practices особо проверить тоже не получится
+Исправим это, чтобы хотя бы минимально посмотреть на работу композа,
 ## Хороший docker-compose.yml
 1. Мы в целом не указываем version, потому что, начиная с какой-то версии, это делать не нужно и все и так работает
 2. Ставим нормальные и понятные названия сервисов, в моем случае
@@ -139,3 +254,4 @@ docker-compose restart web-app
 А тут еще я захотела посмотреть на табличку в БД
 
 <img width="1898" height="497" alt="Снимок экрана 2025-10-17 204152" src="https://github.com/user-attachments/assets/5e25bcc4-1ac4-4163-83e2-64820b46e617" />
+
