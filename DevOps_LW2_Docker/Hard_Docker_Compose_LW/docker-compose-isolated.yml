@@ -1,0 +1,84 @@
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PYTHONPATH: ${PYTHONPATH}
+    healthcheck: 
+        test: ["CMD-SHELL", "pg_isready -U admin -d newsdb"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+        start_period: 10s
+    
+    networks:
+      - db_network
+
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+
+  database-init:
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+    build: .   
+
+    command: >
+      sh -c "
+          python bd_filling.py
+          
+          if psql -h postgres-db -U admin -d newsdb -c 'SELECT COUNT(*) FROM news' | grep -q '0'; then
+            exit 1
+          else
+            exit 0
+          fi
+        "
+    working_dir: /app/database
+    environment:
+      DATABASE_URL: ${DATABASE_URL} 
+      PGPASSWORD:: ${POSTGRES_PASSWORD}
+      PYTHONPATH: ${PYTHONPATH}  
+
+    networks:
+      - db_init_network   
+
+    volumes:
+      - ./shared:/app/shared
+      - ./database:/app/database  
+
+  web-app:
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      database-init:
+        condition: service_completed_successfully
+
+    build: .   
+
+    command: python habrnews.py         
+    working_dir: /app/backend 
+    environment:
+      DATABASE_URL: ${DATABASE_URL} 
+      PYTHONPATH: ${PYTHONPATH} 
+
+    networks:
+      - web_network
+
+    ports:
+      - "8000:8080" 
+    volumes:
+      - ./shared:/app/shared  
+      - ./backend:/app/backend  
+
+volumes:
+  postgres_data:
+
+networks:
+  db_network:
+  db_init_network:
+  web_network:
