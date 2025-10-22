@@ -1,0 +1,33 @@
+version: '1'
+services:
+  a_very_long_and_cool_creation_of_the_best_data_base_in_the_world:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: newsdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret123
+      PYTHONPATH: /app
+
+    ports:
+      - "5432:5432"
+
+  this_is_the_part_when_we_are_initializing_and_filling_our_precious_database:
+
+    build: .   
+
+    command: python bd_filling.py
+    environment:
+      DATABASE_URL: postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH: /app      
+
+  this_thing_takes_data_from_habr_ru_and_shows_it_when_you_open_your_local_host:
+
+    build: .   
+
+    command: python habrnews.py   
+    environment:
+      DATABASE_URL: postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH: /app
+
+    ports:
+      - "8000:8080" 
