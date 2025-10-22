@@ -1,5 +1,5 @@
 ## Дисклеймер 
-Прочитав в интернете, для каких сервисов применяется докер-композ, я поняла, что часто он нужен в таких системах, где есть несколько серверов, например, бэк, фронт, базы данных и т.д. 
+Прочитав в интернете, для каких сервисов применяется докер-композ, мы поняли, что часто он нужен в таких системах, где есть несколько серверов, например, бэк, фронт, базы данных и т.д. 
 
 Очень удачно на курсе программирования мы делали сайт, который:
 - парсит habr.ru
@@ -9,7 +9,7 @@
   
 Сайт немного сухой в плане передвижения (надо самим вписывать путь в ссылке) и дизайна, но для данной лабораторной работы - вполне достаточно.
 
-Единственная вещь, которуя я поменяла, была база данных. Изначально использовался SQLite и данные хранились в файле .bd, а я для большей практики и хардкора захотела создавать базу PostgreSQL, поэтому просто пришлось добавить +1 бибилиотеку в requirements.txt и изменить ссылку, по которой создается engine.
+Единственная вещь, которуя мы поменяли, была база данных. Изначально использовался SQLite и данные хранились в файле .bd, а мы для большей практики и хардкора захотели создавать базу PostgreSQL, поэтому просто пришлось добавить +1 бибилиотеку в requirements.txt и изменить ссылку, по которой создается engine.
 
 #### Здесь также хочу отметить, что я писала композ для dev, а не prod, то есть по-хорошему важно было иметь возможность вносить изменения без ненужных rebuildов 
 
@@ -45,7 +45,7 @@ ports:
       - "5432:5432"
 ```
 4. Не будем встраивать том, то есть данные базы данных не будут храниться, что по очевидным причинам не есть хорошо
-Для эксперимента я решила добавить искуственную задержку в инициализацию базы данных, чтобы потом показать пример еще одного bad practice (отсутствие depends_on)
+Для эксперимента решено было добавить искуственную задержку в инициализацию базы данных, чтобы потом показать пример еще одного bad practice (отсутствие depends_on)
 ### Часть this_is_the_part_when_we_are_initializing_and_filling_our_precious_database:
 1. Из хорошего - инициализируем сборку образа из докерфайла и ставим команду запуска нужного файла (заполнение бд данными)
 ```
@@ -86,10 +86,10 @@ services:
   a_very_long_and_cool_creation_of_the_best_data_base_in_the_world:
     image: postgres:latest
     environment:
-      POSTGRES_DB=newsdb
-      POSTGRES_USER=admin
-      POSTGRES_PASSWORD=secret123
-      PYTHONPATH=/app
+      POSTGRES_DB: newsdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret123
+      PYTHONPATH: /app
 
     ports:
       - "5432:5432"
@@ -100,8 +100,8 @@ services:
 
     command: python bd_filling.py
     environment:
-      DATABASE_URL=postgresql://admin:secret123@postgres-db:5432/newsdb
-      PYTHONPATH=/app      
+      DATABASE_URL: postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH: /app      
 
   this_thing_takes_data_from_habr_ru_and_shows_it_when_you_open_your_local_host:
 
@@ -109,8 +109,8 @@ services:
 
     command: python habrnews.py   
     environment:
-      DATABASE_URL=postgresql://admin:secret123@postgres-db:5432/newsdb
-      PYTHONPATH=/app
+      DATABASE_URL: postgresql://admin:secret123@postgres-db:5432/newsdb
+      PYTHONPATH: /app
 
     ports:
       - "8000:8080" 
@@ -121,7 +121,7 @@ services:
 ```
 the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
 ```
-В глаза сразу бросаются наши длинные названия, которые делают чтение логов почти невозможными. Даже мне нужно несколько раз перечитать только лишь названия, чтобы понять, что происходит, хотя, казалось бы, я сама придумала названия
+В глаза сразу бросаются наши длинные названия, которые делают чтение логов почти невозможными. Даже нам нужно несколько раз перечитать только лишь названия, чтобы понять, что происходит, хотя, казалось бы, ямы сами придумали названия
 
 <img width="1492" height="66" alt="Снимок экрана 2025-10-20 151401" src="https://github.com/user-attachments/assets/64c13850-df53-4e05-b01e-796158acbf00" />
 
@@ -149,11 +149,11 @@ healthcheck:
       retries: 5
       start_period: 10s
 ```
-чтобы все ждали создания бд, а не просто запуска контейнера (примерно похожее написала и в другом сервисе)
+чтобы все ждали создания бд максимум 5 раз, а не просто запуска контейнера 
 
-также я заодно решила сразу написать и для части сайта такую штуку
+также я заодно решила сразу написать и для части сайта такие состояния (проверка того, что таблица в бд имеет хотя бы 1 строку)
 ```
-condition: service_completed_successfull
+condition: service_completed_successfully
 ```
 ```
 command: >
@@ -184,6 +184,7 @@ docker-compose -f docker-compose-bad.yml restart
 <img width="673" height="120" alt="Снимок экрана 2025-10-20 160847" src="https://github.com/user-attachments/assets/d34bca74-e252-4128-afb4-0a93d5ef344f" />
 
 Главная страница осталась прежней(
+Еще отметим, что после связки down + build + up, данные не сохранялись (очевидно из-за отсутствия соотвествующего тома) и приходилось по новой размечать данные
 ## Хороший docker-compose.yml
 1. Мы в целом не указываем version, потому что, начиная с какой-то версии, это делать не нужно и все и так работает
 2. Ставим нормальные и понятные названия сервисов, в моем случае
@@ -200,6 +201,7 @@ services:
 - Берем образ полегче
 - Встраиваем том, чтобы данные где-то хранились (named volume) даже после docker-compose down
 - Важные данные конфингурации БД и пути пишем в переменные окружения и создаем файл .env, в котором они хранятся (удобнее для безопасности (если вдруг пойдет в прод) и для внесения изменений, то есть не надо переписывать docker-compose.yaml)
+- Остальное было уже сделано в части плохого файла
 ```
 postgres-db:
     image: postgres:15-alpine
@@ -244,7 +246,8 @@ database-init:
         "
     working_dir: /app/database
     environment:
-      DATABASE_URL: ${DATABASE_URL} 
+      DATABASE_URL: ${DATABASE_URL}
+      PGPASSWORD:: ${POSTGRES_PASSWORD}
       PYTHONPATH: ${PYTHONPATH}       
 
     volumes:
@@ -257,9 +260,11 @@ database-init:
 - зависимости от серверов 2 штуки
 - порты прописаны корректно (локальный порт перебрасывается на порт в контейнере)
 ```
-depends_on:
-      - postgres-db
-      - database-init
+    depends_on:
+          postgres-db:
+            condition: service_healthy
+          database-init:
+            condition: service_completed_successfull
 
     build: .   
 
@@ -276,7 +281,7 @@ depends_on:
       - ./backend:/app/backend
 ```
 
-Ну и в конце, так как у нас Named volume (том в контейнере), мы его объявляем
+Ну и в конце, так как у нас Named volume, мы его объявляем
 
 ```
 volumes:
@@ -328,4 +333,17 @@ docker-compose restart web-app
 
 <img width="1898" height="497" alt="Снимок экрана 2025-10-17 204152" src="https://github.com/user-attachments/assets/5e25bcc4-1ac4-4163-83e2-64820b46e617" />
 
+В какой-то момент была написана связка down + build + up и было видно, что данные остались 
+```
+PostgreSQL Database directory appears to contain a database; Skipping initialization
+```
+Это очень удобно в плане разработки, так как в нашем контексте не нужно каждый раз заново размечать данные для работы рекомендательной системы
+Ну и напоследок:
+- был написан .dockerignore
+- в dockerfile отсуствует строка
+```
+COPY . .
+```
+так как мы все равно встраиваем тома с данными файлами 
+в плохом докер-композе эта строка была вписана в докерфайл
 
