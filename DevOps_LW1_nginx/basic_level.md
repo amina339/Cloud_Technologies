@@ -349,5 +349,25 @@ sudo chown -R www-data:www-data /var/www/project_a/static
 ```
 ### 2) Настроим Project B:
 
-
 <b>Второй проект - сорта помело и краткое их описание с картинками</b>
+
+Изменим доменное имя на pomelo.
+
+```sudo nano /etc/nginx/sites-available/project_b``` - открываем конфиг
+
+```server_name pomelo.local;``` - заменяем строчку с server_name
+
+```sudo nano /etc/hosts``` - открываем hosts
+
+```127.0.0.1 pomelo.local``` - меняем строчку где был project-b
+
+Создадим папку для картинок в Project B
+```
+sudo mkdir -p /var/www/project_b/static/images
+sudo chown -R www-data:www-data /var/www/project_b/static
+```
+За кадром скачаем и поместим туда фото разных сортов помело.
+
+```sudo nano /var/www/project_b/index.html``` - открываем файл проекта
+Полный код файла можно посмотреть здесь, однако тут будет финальная версия и будет использован alias, а сейчас для вставки картинок используется полный путь и код выглядит, на примере первой картинки вот так:
+
