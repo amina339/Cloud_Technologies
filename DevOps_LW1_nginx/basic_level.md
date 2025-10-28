@@ -239,4 +239,83 @@ https://project-b.local
 Красота, все нормально, проект открывается, https работает, а браузер браузер предупреждает о самоподписанном сертификате.
 
 ## 6 шаг. Настройка принудительного редиректа с HTTP на HTTPS
+### 1) Опять изменим конфиг для Project A:
+```sudo nano /etc/nginx/sites-available/project_a``` - открываем
+И заменяем содержимое на:
+```
+# редирект с HTTP на HTTPS
+server {
+    listen 80;
+    server_name project-a.local;
+    return 301 https://$server_name$request_uri;
+}
 
+# основной сервер HTTPS
+server {
+    listen 443 ssl;
+    server_name project-a.local;
+
+    # SSL сертификаты
+    ssl_certificate /etc/nginx/ssl/project-a.crt;
+    ssl_certificate_key /etc/nginx/ssl/project-a.key;
+
+    root /var/www/project_a;
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+### 2) Опять изменим конфиг для Project B:
+```sudo nano /etc/nginx/sites-available/project_b``` - октрываем
+И заменяем содержимое на:
+```
+# редирект с HTTP на HTTPS
+server {
+    listen 80;
+    server_name project-b.local;
+    return 301 https://$server_name$request_uri;
+}
+
+# основной сервер HTTPS
+server {
+    listen 443 ssl;
+    server_name project-b.local;
+
+    # SSL сертификаты
+    ssl_certificate /etc/nginx/ssl/project-b.crt;
+    ssl_certificate_key /etc/nginx/ssl/project-b.key;
+
+    root /var/www/project_b;
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+```sudo nginx -t``` - проверяем конфигурацию
+
+```sudo systemctl reload nginx``` - перезагружаем nginx
+Результат:
+<img width="676" height="92" alt="image" src="https://github.com/user-attachments/assets/479bfc54-1ec0-4ce4-8195-d9639de3b733" />
+Все ок.
+Теперь надо проверить, работает ли наш редирект, или мы его по фану создали.
+
+Откроем в браузере наши проекты <b>(http без s!!!)</b>:
+```
+http://project-a.local
+http://project-b.local
+```
+<b>Project A:</b>
+
+<img width="446" height="212" alt="image" src="https://github.com/user-attachments/assets/426682a5-a9b0-40d7-84b8-45cfff73cc02" />
+
+<b>Project B:</b>
+
+<img width="490" height="220" alt="image" src="https://github.com/user-attachments/assets/33439e91-5cce-451b-9fc9-370af045d47e" />
+
+Ура! Редирект работает.
+
+## 7 шаг. Перед тем, как настроить alias, добавим немного текста и картинок в наши проекты, и как нибудь их назовем
