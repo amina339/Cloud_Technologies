@@ -319,3 +319,35 @@ http://project-b.local
 Ура! Редирект работает.
 
 ## 7 шаг. Перед тем, как настроить alias, добавим немного текста и картинок в наши проекты, и как нибудь их назовем
+
+### 1) Настроим Project A:
+
+<b>Первый проект - сорта гранатов и краткое их описание с картинками</b>
+
+Изменим доменное имя на pomegranate.
+
+```sudo nano /etc/nginx/sites-available/project_a``` - открываем конфиг
+
+```server_name pomegranate.local;``` - заменяем строчку с server_name
+
+```sudo nano /etc/hosts``` - открываем hosts
+
+```127.0.0.1 pomegranate.local``` - меняем строчку где был project-a
+
+Создадим папку для картинок в Project A
+```
+sudo mkdir -p /var/www/project_a/static/images
+sudo chown -R www-data:www-data /var/www/project_a/static
+```
+За кадром скачаем и поместим туда фото разных сортов граната.
+
+```sudo nano /var/www/project_a/index.html``` - открываем файл проекта
+Полный код файла можно посмотреть здесь, однако тут будет финальная версия и будет использован alias, а сейчас для вставки картинок используется полный путь и код выглядит, на примере первой картинки вот так:
+
+```
+<img src="/static/images/peru.jpg" alt="Pomegranate of Peru">
+```
+### 2) Настроим Project B:
+
+
+<b>Второй проект - сорта помело и краткое их описание с картинками</b>
