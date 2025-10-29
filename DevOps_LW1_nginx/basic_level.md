@@ -370,4 +370,39 @@ sudo chown -R www-data:www-data /var/www/project_b/static
 
 ```sudo nano /var/www/project_b/index.html``` - открываем файл проекта
 Полный код файла можно посмотреть здесь, однако тут будет финальная версия и будет использован alias, а сейчас для вставки картинок используется полный путь и код выглядит, на примере первой картинки вот так:
+```
+<img src="/static/images/sweety.jpg" alt="Pomelo Sweetie">
+```
+## 8 шаг. Настройка alias
+
+### 1)Для Project A:
+
+```sudo nano /etc/nginx/sites-available/project_a``` - открываем конфиг
+Добавляем alias для картинок - псевдоним пути
+```
+location /pics_a/ {
+        alias /var/www/project_a/static/images/;
+    }
+```
+
+### 2)Для Project B:
+
+```sudo nano /etc/nginx/sites-available/project_b``` - открываем конфиг
+Добавляем alias для картинок - псевдоним пути
+```
+location /pics_b/ {
+        alias /var/www/project_b/static/images/;
+    }
+```
+
+```sudo nginx -t ``` - проверяем конфигурацию
+```sudo systemctl reload nginx``` - перезагружаем nginx
+Результат:
+<img width="690" height="122" alt="image" src="https://github.com/user-attachments/assets/67aca661-eafc-4d14-a5c1-d9ee5421c570" />
+Все нормик, дальше идем.
+
+Теперь в html-файле для проектов а и б заменяем пути к картинкам, которые у нас были на новые, используя псевдонимы:
+
+<b>Например:</b>
+```<img src="/static/images/peru.jpg" alt="Pomegranate of Peru">``` <b>меняем на</b> ```<img src="/pics_a/peru.jpg" alt="Pomegranate of Peru">```
 
