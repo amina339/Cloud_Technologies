@@ -1,6 +1,9 @@
 # Лабораторная работа 1
 
 Для того чтобы упростить себе жизнь, лабораторная выполнялась на виртуалке, конкретно использована Ubuntu (64-bit).
+<div align="center">
+    <img width="735" height="706" alt="image" src="https://github.com/user-attachments/assets/91bfd1bd-fcaa-49ad-866c-899788d0c410" />
+</div>
 
 ## 1 шаг. Подготовка к работе
 
@@ -238,7 +241,9 @@ server {
 ```sudo systemctl reload nginx``` - перезагружаем nginx
 
 Результат:
+
 <img width="700" height="114" alt="image" src="https://github.com/user-attachments/assets/a3835c9a-4b34-4581-b79c-97842484050c" />
+
 Все опять хорошо.
 
 Теперь проверим как работают наши сертификаты и настроен ли https.
@@ -249,10 +254,12 @@ https://project-a.local
 https://project-b.local
 ```
 <b>Project A:</b>
+
 <img width="900" height="502" alt="image" src="https://github.com/user-attachments/assets/ac8ec77f-eafd-43fe-b710-2694ff5c9e7f" />
 <img width="436" height="232" alt="image" src="https://github.com/user-attachments/assets/02fa3156-cb75-43f6-a621-00f4d5a924d1" />
 
 <b>Project B:</b>
+
 <img width="870" height="506" alt="image" src="https://github.com/user-attachments/assets/475669b4-2609-4664-af2d-7617bb1460d1" />
 <img width="450" height="218" alt="image" src="https://github.com/user-attachments/assets/7a37939c-fa1b-44f4-8943-17382524594e" />
 
@@ -336,7 +343,9 @@ server {
 Результат:
 
 <img width="676" height="92" alt="image" src="https://github.com/user-attachments/assets/479bfc54-1ec0-4ce4-8195-d9639de3b733" />
+
 Все ок.
+
 Теперь надо проверить, работает ли наш редирект, или мы его по фану создали.
 
 Откроем в браузере наши проекты <b>(http без s!!!)</b>:
@@ -418,6 +427,7 @@ sudo chown -R www-data:www-data /var/www/project_b/static
 ### 1)Для Project A:
 
 ```sudo nano /etc/nginx/sites-available/project_a``` - открываем конфиг
+
 Добавляем alias для картинок - псевдоним пути
 ```
 location /pics_a/ {
@@ -428,6 +438,7 @@ location /pics_a/ {
 ### 2)Для Project B:
 
 ```sudo nano /etc/nginx/sites-available/project_b``` - открываем конфиг
+
 Добавляем alias для картинок - псевдоним пути
 ```
 location /pics_b/ {
@@ -436,6 +447,7 @@ location /pics_b/ {
 ```
 
 ```sudo nginx -t ``` - проверяем конфигурацию
+
 ```sudo systemctl reload nginx``` - перезагружаем nginx
 
 Результат:
@@ -447,6 +459,21 @@ location /pics_b/ {
 Теперь в html-файле для проектов A и B заменяем пути к картинкам, которые у нас были на новые, используя псевдонимы:
 
 <b>Например:</b>
+
 ```<img src="/static/images/peru.jpg" alt="Pomegranate of Peru">``` <b>меняем на</b> ```<img src="/pics_a/peru.jpg" alt="Pomegranate of Peru">```
 
+## 9 Шаг. Теперь посмотрим на наши готовенькие проекты:
+### Project A:
+<img width="1220" height="724" alt="image" src="https://github.com/user-attachments/assets/50d744da-2280-4d37-923e-0317fb494ba8" />
+<img width="1200" height="730" alt="image" src="https://github.com/user-attachments/assets/13a7dc36-9ef7-4876-a3bb-22dda5a9823a" />
+<img width="1212" height="732" alt="image" src="https://github.com/user-attachments/assets/f586c2b8-8f98-450c-9a90-8f8fbba87413" />
+
+### Poject B:
+<img width="1216" height="730" alt="image" src="https://github.com/user-attachments/assets/4e7598c7-2614-4a93-a9c5-2d35f369ea24" />
+<img width="1196" height="730" alt="image" src="https://github.com/user-attachments/assets/0e007aac-dff1-4462-a73f-53b3b3b1e800" />
+<img width="1218" height="726" alt="image" src="https://github.com/user-attachments/assets/694283af-0284-4df6-a0ff-5d7be63d5242" />
+
 ## На этом все!
+<div align="center">
+    <img width="685" height="500" alt="image" src="https://github.com/user-attachments/assets/d7c6ef91-5f5b-43bd-a37c-bcac1778a0d1" />
+</div>
