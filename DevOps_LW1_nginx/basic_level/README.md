@@ -10,7 +10,7 @@
 
 ```sudo apt install nginx -y``` - устанавливаем nginx.
 
-```sudo systemctl start nginx```, ```sudo systemctl enable nginx``` - запускаем nginx.
+```sudo systemctl start nginx```, ```sudo systemctl enable nginx``` - запускаем nginx и включаем автозапуск nginx при загрузке системы.
 
 ```sudo systemctl status nginx``` - проверяем статус.
 
@@ -26,6 +26,7 @@ sudo mkdir -p /var/www/project_a
 sudo mkdir -p /var/www/project_b
 ```
 Создает html-файлы (сейчас простые, наполним их чуть-чуть попозже):
+
 <b>Для проекта A:</b>
 ```
 sudo nano /var/www/project_a/index.html
@@ -66,6 +67,7 @@ sudo chown -R www-data:www-data /var/www/project_a
 sudo chown -R www-data:www-data /var/www/project_b
 sudo chmod -R 755 /var/www/
 ```
+С такими правами владелец может читать/писать/выполнять, остальные - только читать/выполнять, это важно для безопасности веб-сервера.
 
 ## 2 шаг. Настройка виртуальных хостов
 <b>Создаем конфиг для Project A:</b>
@@ -75,14 +77,14 @@ sudo nano /etc/nginx/sites-available/project_a
 В него пишем следующий код:
 ```
 server {
-    listen 80;
-    server_name project-a.local;
+    listen 80;  #сервер будет слушать HTTP-запросы на порту 80
+    server_name project-a.local;  #nginx будет использовать эту конфигурацию для запросов к указанному домену
 
     root /var/www/project_a;
     index index.html index.htm;
 
     location / {
-        try_files $uri $uri/ =404;
+        try_files $uri $uri/ =404;    #директива пытается найти запрашиваемый файл, если не находит - возвращает 404
     }
 }
 ```
@@ -111,11 +113,13 @@ server {
 sudo ln -s /etc/nginx/sites-available/project_a /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/project_b /etc/nginx/sites-enabled/
 ```
-Проверяем конфигурацию на ошибки:
+Мы создаем символическую ссылку для активации сайта. Это позволит нам включать/выключать сайты без удаления конфигов.
+
+Проверяем конфигурацию на ошибки (тестируем синтаксис):
 ```
 sudo nginx -t
 ```
-И перезагружаем nginx:
+И перезагружаем nginx (сервер при такой перезагрузке не останавливается):
 ```
 sudo systemctl reload nginx
 ```
@@ -123,23 +127,25 @@ sudo systemctl reload nginx
 На скрине видно что при проверке syntax is ok и test is successful, ура.
 
 ## 3 шаг. Настройка локальных доменов
-Откроем файл hosts:
+Откроем файл hosts (он преобразует доменные имена в IP-адреса в обход DNS-серверов):
 ```
 sudo nano /etc/hosts
 ```
-Добавим в конец файла две строки:
+Добавим в конец файла две строки, которые буду указывать, что домены должны вести на локальную машину:
 ```
 127.0.0.1 project-a.local
 127.0.0.1 project-b.local
 ```
-Пингуем наши домены:
+Пингуем наши домены (отправляем 2 ICMP-пакета для проверки доступности хоста):
 ```
 ping -c 2 project-a.local
 ping -c 2 project-b.local
 ```
 Результат:
+
 <img width="708" height="210" alt="image" src="https://github.com/user-attachments/assets/7d30966a-f65a-4fa8-8898-90db9e1a781d" />
-Нам отвечают, радуемся.
+
+Нам отвечают, радуемся. Ну а вообще, результат показывает, что домен корректно преобразуется в IP-адрес 127.0.0.1, и пакеты успешно доходят до цели.
 
 ## 4 шаг. Создание SSL-сертификатов
 Создадим самоподписанные SSL-сертификаты для обоих проектов.
@@ -155,6 +161,18 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -out /etc/nginx/ssl/project-a.crt \
     -subj "/C=RU/ST=Moscow/L=Moscow/O=IT/CN=project-a.local"
 ```
+<b>Для понимания:</b>
+
+```-x509``` - создание самоподписанного сертификата
+
+```-nodes``` - сертификат без пароля (для автоматической загрузки)
+
+```-days 365``` - срок действия сертификата (1 год)
+
+```-newkey rsa:2048``` - генерация RSA-ключа длиной 2048 бит
+
+```-subj``` - указание данных сертификата (страна, город, организация, домен)
+
 Генерируем SSL-сертификат для Project B:
 ```
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -173,15 +191,16 @@ sudo ls -la /etc/nginx/ssl/
 ## 5 шаг. Настройка HTTPS
 ### 1) Обновим конфиг для Project A с поддержкой HTTPS:
 ```sudo nano /etc/nginx/sites-available/project_a``` - открываем
+
 И меняем содержимое на:
 ```
 server {
     listen 80;
-    listen 443 ssl;
+    listen 443 ssl;   #добавление поддержки HTTPS на порту 443
     server_name project-a.local;
 
     # SSL сертификаты
-    ssl_certificate /etc/nginx/ssl/project-a.crt;
+    ssl_certificate /etc/nginx/ssl/project-a.crt;   
     ssl_certificate_key /etc/nginx/ssl/project-a.key;
 
     root /var/www/project_a;
@@ -194,6 +213,7 @@ server {
 ```
 ### 2) Обновим конфиг для Project B с поддержкой HTTPS:
 ```sudo nano /etc/nginx/sites-available/project_b``` - открываем
+
 И меняем содержимое на:
 ```
 server {
@@ -236,11 +256,12 @@ https://project-b.local
 <img width="870" height="506" alt="image" src="https://github.com/user-attachments/assets/475669b4-2609-4664-af2d-7617bb1460d1" />
 <img width="450" height="218" alt="image" src="https://github.com/user-attachments/assets/7a37939c-fa1b-44f4-8943-17382524594e" />
 
-Красота, все нормально, проект открывается, https работает, а браузер браузер предупреждает о самоподписанном сертификате.
+Красота, все нормально, проект открывается, https работает, а браузер предупреждает о самоподписанном сертификате.
 
 ## 6 шаг. Настройка принудительного редиректа с HTTP на HTTPS
 ### 1) Опять изменим конфиг для Project A:
 ```sudo nano /etc/nginx/sites-available/project_a``` - открываем
+
 И заменяем содержимое на:
 ```
 # редирект с HTTP на HTTPS
@@ -267,8 +288,21 @@ server {
     }
 }
 ```
+<b>Немного подробнее про редирект:</b>
+
+```listen 80``` - прослушивание HTTP-запросов на порту 80
+
+```return 301 https://$server_name$request_uri;``` - перенаправление 301 (постоянное):
+
+```301``` - код постоянного перемещения, сообщает браузерам и поисковым системам, что страница перемещена
+    
+```https://$server_name``` - подстановка доменного имени (project-a.local)
+    
+```$request_uri``` - сохранение полного пути запроса (например, /index.html)
+    
 ### 2) Опять изменим конфиг для Project B:
 ```sudo nano /etc/nginx/sites-available/project_b``` - октрываем
+
 И заменяем содержимое на:
 ```
 # редирект с HTTP на HTTPS
@@ -298,7 +332,9 @@ server {
 ```sudo nginx -t``` - проверяем конфигурацию
 
 ```sudo systemctl reload nginx``` - перезагружаем nginx
+
 Результат:
+
 <img width="676" height="92" alt="image" src="https://github.com/user-attachments/assets/479bfc54-1ec0-4ce4-8195-d9639de3b733" />
 Все ок.
 Теперь надо проверить, работает ли наш редирект, или мы его по фану создали.
@@ -342,7 +378,8 @@ sudo chown -R www-data:www-data /var/www/project_a/static
 За кадром скачаем и поместим туда фото разных сортов граната.
 
 ```sudo nano /var/www/project_a/index.html``` - открываем файл проекта
-Полный код файла можно посмотреть здесь, однако тут будет финальная версия и будет использован alias, а сейчас для вставки картинок используется полный путь и код выглядит, на примере первой картинки вот так:
+
+Полный код файла можно посмотреть [здесь](project_a.html), однако там будет финальная версия и будет использован alias, а сейчас для вставки картинок используется полный путь и код выглядит, на примере первой картинки, вот так:
 
 ```
 <img src="/static/images/peru.jpg" alt="Pomegranate of Peru">
@@ -369,11 +406,14 @@ sudo chown -R www-data:www-data /var/www/project_b/static
 За кадром скачаем и поместим туда фото разных сортов помело.
 
 ```sudo nano /var/www/project_b/index.html``` - открываем файл проекта
-Полный код файла можно посмотреть здесь, однако тут будет финальная версия и будет использован alias, а сейчас для вставки картинок используется полный путь и код выглядит, на примере первой картинки вот так:
+
+Полный код файла можно посмотреть [здесь](project_b.html), однако там будет финальная версия и будет использован alias, а сейчас для вставки картинок используется полный путь и код выглядит, на примере первой картинки, вот так:
 ```
 <img src="/static/images/sweety.jpg" alt="Pomelo Sweetie">
 ```
 ## 8 шаг. Настройка alias
+
+Вообще, Alias (псевдоним) - это механизм nginx для создания виртуальных путей, которые указывают на реальные директории на сервере. Он позволяет создавать короткие и понятные URL вместо длинных реальных путей.
 
 ### 1)Для Project A:
 
@@ -397,12 +437,16 @@ location /pics_b/ {
 
 ```sudo nginx -t ``` - проверяем конфигурацию
 ```sudo systemctl reload nginx``` - перезагружаем nginx
+
 Результат:
+
 <img width="690" height="122" alt="image" src="https://github.com/user-attachments/assets/67aca661-eafc-4d14-a5c1-d9ee5421c570" />
+
 Все нормик, дальше идем.
 
-Теперь в html-файле для проектов а и б заменяем пути к картинкам, которые у нас были на новые, используя псевдонимы:
+Теперь в html-файле для проектов A и B заменяем пути к картинкам, которые у нас были на новые, используя псевдонимы:
 
 <b>Например:</b>
 ```<img src="/static/images/peru.jpg" alt="Pomegranate of Peru">``` <b>меняем на</b> ```<img src="/pics_a/peru.jpg" alt="Pomegranate of Peru">```
 
+## На этом все!
