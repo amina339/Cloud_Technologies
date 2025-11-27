@@ -5,7 +5,8 @@
 
 Лабораторная выполнена на виртуальной машине, на Ubuntu (64-bit)
 
-Обновляем систему и устанавливаем инструмент ffuf для перебора веб-страниц
+Обновляем систему, устанавливаем инструмент ffuf для перебора веб-страниц и curl с wget для выполнения HTTP-запросов к целевому веб-серверу и проверки его ответов при тестировании уязвимостей
+
 ```
 sudo apt update && sudo apt upgrade -y
 sudo apt install ffuf curl wget -y
@@ -31,6 +32,8 @@ curl "http://school207.ru/../../../../etc/passwd"
 
 <img width="1220" height="662" alt="image" src="https://github.com/user-attachments/assets/133b52d3-3d78-436c-ace7-ec7b3ad4694b" />
 
+Возвращает html главной страницы 
+
 ### URL encoding:
 
 ```
@@ -41,6 +44,8 @@ curl "http://school207.ru/%2e%2e/%2e%2e/etc/passwd"
 
 <img width="888" height="182" alt="image" src="https://github.com/user-attachments/assets/86bbc572-5b54-41d0-a0d5-9f6284215990" />
 
+Блокирует запрос :((
+
 ### Через параметры:
 
 ```
@@ -49,6 +54,8 @@ curl "http://school207.ru/download?file=../../etc/passwd"
 ```
 <img width="1216" height="684" alt="image" src="https://github.com/user-attachments/assets/1cb04706-b512-4b0e-9664-da3584758129" />
 <img width="1204" height="712" alt="image" src="https://github.com/user-attachments/assets/618b0a9a-3e91-4aa0-9113-fef6833d8784" />
+
+Возвращает html главной страницы 
 
 ### Проверка конфигурационных файлов nginx:
 
@@ -60,11 +67,13 @@ curl "http://school207.ru/../../nginx/nginx.conf"
 <img width="1212" height="710" alt="image" src="https://github.com/user-attachments/assets/271e0c6f-59a1-4c65-92c0-b9cf67ed3fb7" />
 <img width="1204" height="632" alt="image" src="https://github.com/user-attachments/assets/93d662f6-5b99-4b91-9b96-c91ab01d5a3d" />
 
+Возвращает html главной страницы 
+
 ### Оценка результатов:
 
 1. Все способы кроме URL-encoding возвращают главную страницу сайта, что значит что Nginx нормализует путь и игнорирует ../. Вместо попытки выйти из корневой директории, он просто показывает главную страницу (/). Это нормальное поведение правильно настроенного nginx.
   
-2. URL-encoding возвращает 400 Bad Request, что значит что Nginx распознал это как попытку path traversal и заблокировал запрос. Код 400 означает "неверный запрос", то есть защите работает.
+2. URL-encoding возвращает 400 Bad Request, что значит что Nginx распознал это как попытку path traversal и заблокировал запрос. Код 400 означает "неверный запрос", то есть защита работает.
 
 Тем не менее попытаемся найти еще что-нибудь.
 
@@ -81,6 +90,8 @@ curl "http://school207.ru/../../nginx/nginx.conf"
 cd SecLists/Discovery/Web-Content/
 ls -la
 ```
+
+<img width="1076" height="706" alt="image" src="https://github.com/user-attachments/assets/5a493fed-14e5-456a-97fd-bacefe160e34" />
 
 ```ffuf -w SecLists/Discovery/Web-Content/common.txt -u http://school207.ru/FUZZ -mc 200,301,302,403 -t 50``` - перебор с помощью вордлиста
 
@@ -114,7 +125,7 @@ ls -la
 Проверим найденные директории подробнее:
 
 
-```curl "http://school207.ru/tmp/"```
+```curl "http://school207.ru/upload/"```
 <img width="1182" height="602" alt="image" src="https://github.com/user-attachments/assets/a6d4c81a-62c8-42a1-84d5-31ebb39c36b9" />
 
 
@@ -135,10 +146,10 @@ ls -la
 
 Тогда посмотрим наполнение
 
-``curl "http://school207.ru/bitrix/"```
+```curl "http://school207.ru/bitrix/"```
 
 <img width="1174" height="120" alt="image" src="https://github.com/user-attachments/assets/1959ca78-51f7-4cc3-8aa2-365c3cfda7cf" />
 
-Из этого можем сделать вывод что при заходе на /bitrix/ происходит автоматическое перенаправление на админку, причем content="0" - перенаправление мгновенное (0 секунд), и нас перенаправляет на /bitrix/admin/index.php, то есть мы узеали точный путь к админке Bitrix и подтвердили её существование
+Из этого можем сделать вывод что при заходе на /bitrix/ происходит автоматическое перенаправление на админку, причем content="0" - перенаправление мгновенное (0 секунд), и нас перенаправляет на /bitrix/admin/index.php, то есть мы узнали точный путь к админке Bitrix и подтвердили её существование, хотя доступ к ней все еще запрещен :(( молодцы ребята все настроили защитили практически правильно.
 
 
