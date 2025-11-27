@@ -66,7 +66,6 @@ curl "http://school207.ru/../../nginx/nginx.conf"
   
 2. URL-encoding возвращает 400 Bad Request, что значит что Nginx распознал это как попытку path traversal и заблокировал запрос. Код 400 означает "неверный запрос", то есть защите работает.
 
-
 Тем не менее попытаемся найти еще что-нибудь.
 
 ## Проверка уязвимости перебора страниц через ffuf
@@ -83,51 +82,63 @@ cd SecLists/Discovery/Web-Content/
 ls -la
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```mkdir -p ~/lab/wordlists``` - создаем папку для словарей
-
-```nano ~/lab/wordlists/dirs.txt``` - создаем словарь директорий
-
-Пишем в файл набор самых частых директорий, которые встречаются на веб-серверах:
-
-<img width="156" height="386" alt="image" src="https://github.com/user-attachments/assets/422de837-e3e0-4780-bd4b-880c99f2ef16" />
-
-```nano ~/lab/wordlists/files.txt``` - создаем словарь файлов:
-
-Записываем туда файлы, которые считаются типичными "скрытыми" находками на серверах:
-
-<img width="164" height="292" alt="image" src="https://github.com/user-attachments/assets/9e236371-7d38-43e1-ba02-43ce79b7158a" />
-
-```nano ~/lab/wordlists/extensions.txt``` - создаем словарь расширений
-
-Записываем туда минимальный набор расширений:
-
-<img width="102" height="172" alt="image" src="https://github.com/user-attachments/assets/27d97ca1-9bc2-4bf9-9b97-92c72b33af6e" />
-
-### Перебор директорий и файлов
-
-```ffuf -w ~/lab/wordlists/dirs.txt -u http://207school.spb.ru/FUZZ -mc all``` 
-
-Параметры:
-```-w``` - wordlist
-```-u``` - URL, FUZZ - переменная
-```-mc all``` - вывод всех кодов ответов
+```ffuf -w SecLists/Discovery/Web-Content/common.txt -u http://school207.ru/FUZZ -mc 200,301,302,403 -t 50``` - перебор с помощью вордлиста
 
 Результат:
-<img width="1220" height="710" alt="image" src="https://github.com/user-attachments/assets/1e839725-2790-417c-b0c5-304ca9b7c1b5" />
 
-При переборе директорий /tmp/ вернула код 301, что означает существование каталога и перенаправление на корректный URL. Это подтверждает, что ресурс существует, т.е. скрытый путь успешно обнаружен. Все остальные дериктории вернули код 404 что означает отсутствие данных директорий на сервере, либо вероятнее сокрытие путей.
+<img width="972" height="708" alt="image" src="https://github.com/user-attachments/assets/e3b50d72-8b0a-4e59-bfae-67d772461855" />
+
+<img width="986" height="200" alt="image" src="https://github.com/user-attachments/assets/743bd5d8-0d7d-4610-975e-d02f7c3dcb3d" />
+
+Заблокаированные (403):
+
+Все ```.git/``` защищены от доступа, ```.htaccess```, ```.htpasswd``` - конфиги защищены, ```.svn/``` - SVN репозитории защищены 
+
+Интересные находки (код 301, успешно обнаруженные директории):
+
+```.well-known/``` - стандартная директория для сертификатов
+
+```upload/``` - директория для загрузки файлов
+
+```documents/``` - возможное хранилище документов
+
+```images/``` - директория с изображениями
+
+```tmp/``` - временные файлы
+
+```bitrix/``` - указывает на использование CMS Bitrix
+
+
+## Проверка уязвимости раскрытия информации (information disclosure)
+
+Проверим найденные директории подробнее:
+
+
+```curl "http://school207.ru/tmp/"```
+<img width="1182" height="602" alt="image" src="https://github.com/user-attachments/assets/a6d4c81a-62c8-42a1-84d5-31ebb39c36b9" />
+
+
+```curl "http://school207.ru/tmp/"```
+
+<img width="1004" height="248" alt="image" src="https://github.com/user-attachments/assets/8dd20b8b-c223-4d89-be4b-0745529e3e78" />
+
+```curl "http://school207.ru/bitrix/admin/"```
+
+<img width="1036" height="238" alt="image" src="https://github.com/user-attachments/assets/3ab92ca6-4179-4ee1-be27-90750ea672b8" />
+
+
+Попробуем ```curl -s -I "http://school207.ru/bitrix/"```
+
+<img width="1134" height="216" alt="image" src="https://github.com/user-attachments/assets/ceb6b105-1a80-4ea0-a81f-9408bb237017" />
+
+код 200, то есть он доступен!
+
+Тогда посмотрим наполнение
+
+``curl "http://school207.ru/bitrix/"```
+
+<img width="1174" height="120" alt="image" src="https://github.com/user-attachments/assets/1959ca78-51f7-4cc3-8aa2-365c3cfda7cf" />
+
+Из этого можем сделать вывод что при заходе на /bitrix/ происходит автоматическое перенаправление на админку, причем content="0" - перенаправление мгновенное (0 секунд), и нас перенаправляет на /bitrix/admin/index.php, то есть мы узеали точный путь к админке Bitrix и подтвердили её существование
+
+
