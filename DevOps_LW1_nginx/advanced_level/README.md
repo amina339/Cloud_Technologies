@@ -154,5 +154,9 @@ ls -la
 
 ### В итоге проверено 3 уязвимости: Path Traversal, перебор страниц через ffuf и information disclosure
 
+<div align="center">
+  
 ## Конец!
+
 <img width="719" height="626" alt="image" src="https://github.com/user-attachments/assets/3b4fbc42-be70-4503-9fcb-6cdbcb25a9ac" />
+</div>
